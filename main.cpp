@@ -2,6 +2,7 @@
 #define _WIN32_DCOM
 #include <windows.h>
 #include <shlobj.h>
+#include <shellapi.h>
 #include <exdisp.h>
 #include <shobjidl.h>
 #include <string>
