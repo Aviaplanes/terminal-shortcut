@@ -19,9 +19,9 @@
 HHOOK g_hHook = nullptr;
 HWND  g_hMainWnd = nullptr;
 NOTIFYICONDATAW g_nid = {};
-bool  g_shortcutActive = false; // флаг: сработал ли Win+Enter в текущем нажатии
+bool  g_shortcutActive = false; 
 
-// ---------- Детект директории ----------
+// directory detect 
 
 bool IsDesktopWindow(HWND hwnd) {
     wchar_t className[256];
@@ -167,7 +167,7 @@ std::wstring GetTargetDirectory() {
     return path;
 }
 
-// ---------- Запуск терминала ----------
+// terminal launch
 
 void LaunchTerminal(const std::wstring& path) {
     std::wstring cmdLine = L"wt.exe -d \"" + path + L"\"";
@@ -197,7 +197,7 @@ void LaunchTerminal(const std::wstring& path) {
     CloseHandle(pi.hThread);
 }
 
-// ---------- Хук клавиатуры: Win + Enter ----------
+// keyboard hook
 
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode == HC_ACTION) {
@@ -211,8 +211,6 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 if (wParam == WM_KEYDOWN) {
                     PostMessage(g_hMainWnd, WM_TRIGGER_SHORTCUT, 0, 0);
                 }
-                // подавляем и keydown, и keyup Enter,
-                // чтобы событие не улетело в активное окно
                 return 1;
             }
         }
@@ -220,7 +218,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     return CallNextHookEx(g_hHook, nCode, wParam, lParam);
 }
 
-// ---------- Окно / трей ----------
+// tray
 
 void AddTrayIcon(HWND hwnd) {
     g_nid.cbSize = sizeof(NOTIFYICONDATAW);
