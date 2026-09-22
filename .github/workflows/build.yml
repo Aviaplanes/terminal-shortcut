@@ -1,0 +1,22 @@
+name: Build Terminal Shortcut
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Compile
+        shell: cmd
+        run: |
+          cl.exe /O2 /EHsc /std:c++17 main.cpp /Fe:TerminalShortcut.exe user32.lib shell32.lib ole32.lib oleaut32.lib /link /SUBSYSTEM:WINDOWS
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TerminalShortcut
+          path: TerminalShortcut.exe
