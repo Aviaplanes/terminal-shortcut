@@ -204,6 +204,10 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode == HC_ACTION) {
         KBDLLHOOKSTRUCT* pKey = (KBDLLHOOKSTRUCT*)lParam;
 
+        if (pKey->flags & LLKHF_INJECTED) {
+            return CallNextHookEx(g_hHook, nCode, wParam, lParam);
+        }
+
         if (pKey->vkCode == VK_RETURN) {
             bool winDown = (GetAsyncKeyState(VK_LWIN) & 0x8000) ||
                            (GetAsyncKeyState(VK_RWIN) & 0x8000);
@@ -211,8 +215,16 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
             if (winDown) {
                 if (wParam == WM_KEYDOWN) {
                     PostMessage(g_hMainWnd, WM_TRIGGER_SHORTCUT, 0, 0);
+
+                    INPUT input[2] = {};
+                    input[0].type = INPUT_KEYBOARD;
+                    input[0].ki.wVk = VK_CONTROL;
+                    input[1].type = INPUT_KEYBOARD;
+                    input[1].ki.wVk = VK_CONTROL;
+                    input[1].ki.dwFlags = KEYEVENTF_KEYUP;
+                    SendInput(2, input, sizeof(INPUT));
                 }
-                return 1;
+                return 1; 
             }
         }
     }
