@@ -20,7 +20,6 @@
 HHOOK g_hHook = nullptr;
 HWND  g_hMainWnd = nullptr;
 NOTIFYICONDATAW g_nid = {};
-bool  g_shortcutActive = false; 
 
 // directory detect 
 
@@ -168,34 +167,39 @@ std::wstring GetTargetDirectory() {
     return path;
 }
 
-// terminal launch
+// cmd launch
 
-void LaunchTerminal(const std::wstring& path) {
-    std::wstring cmdLine = L"wt.exe -d \"" + path + L"\"";
-
+void LaunchCmd(const std::wstring& path) {
     STARTUPINFOW si = { sizeof(si) };
+    
+    // STARTF_FORCEOFFFEEDBACK отключает крутящийся курсор мыши
+    si.dwFlags = STARTF_FORCEOFFFEEDBACK; 
+    
     PROCESS_INFORMATION pi = {};
 
-    std::vector<wchar_t> buf(cmdLine.begin(), cmdLine.end());
-    buf.push_back(0);
+    // Запускаем напрямую cmd.exe
+    wchar_t cmdLine[] = L"cmd.exe";
 
-    BOOL ok = CreateProcessW(NULL, buf.data(), NULL, NULL, FALSE,
-        0, NULL, NULL, &si, &pi);
+    // Передаем путь сразу как рабочую директорию (8-й параметр)
+    const wchar_t* pWorkingDir = path.empty() ? nullptr : path.c_str();
 
-    if (!ok) {
-        std::wstring fallback = L"cmd.exe /K cd /d \"" + path + L"\"";
-        std::vector<wchar_t> buf2(fallback.begin(), fallback.end());
-        buf2.push_back(0);
-        if (CreateProcessW(NULL, buf2.data(), NULL, NULL, FALSE,
-            0, NULL, NULL, &si, &pi)) {
-            CloseHandle(pi.hProcess);
-            CloseHandle(pi.hThread);
-        }
-        return;
+    BOOL ok = CreateProcessW(
+        NULL, 
+        cmdLine, 
+        NULL, 
+        NULL, 
+        FALSE,
+        CREATE_NEW_CONSOLE, 
+        NULL, 
+        pWorkingDir, // CMD откроется сразу здесь
+        &si, 
+        &pi
+    );
+
+    if (ok) {
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
     }
-
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
 }
 
 // keyboard hook
@@ -216,6 +220,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 if (wParam == WM_KEYDOWN) {
                     PostMessage(g_hMainWnd, WM_TRIGGER_SHORTCUT, 0, 0);
 
+                    // Предотвращаем залипание/открытие меню "Пуск"
                     INPUT input[2] = {};
                     input[0].type = INPUT_KEYBOARD;
                     input[0].ki.wVk = VK_CONTROL;
@@ -240,7 +245,7 @@ void AddTrayIcon(HWND hwnd) {
     g_nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     g_nid.uCallbackMessage = WM_TRAY_ICON;
     g_nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    wcscpy_s(g_nid.szTip, L"Terminal Shortcut");
+    wcscpy_s(g_nid.szTip, L"Cmd Shortcut");
     Shell_NotifyIconW(NIM_ADD, &g_nid);
 }
 
@@ -248,7 +253,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
     case WM_TRIGGER_SHORTCUT: {
         std::wstring dir = GetTargetDirectory();
-        LaunchTerminal(dir);
+        LaunchCmd(dir);
         return 0;
     }
     case WM_TRAY_ICON:
@@ -256,7 +261,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             POINT pt;
             GetCursorPos(&pt);
             HMENU hMenu = CreatePopupMenu();
-            AppendMenuW(hMenu, MF_STRING, ID_TRAY_EXIT, L"exit");
+            AppendMenuW(hMenu, MF_STRING, ID_TRAY_EXIT, L"Exit");
             SetForegroundWindow(hwnd);
             TrackPopupMenu(hMenu, TPM_RIGHTBUTTON, pt.x, pt.y, 0, hwnd, NULL);
             DestroyMenu(hMenu);
