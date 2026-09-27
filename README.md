@@ -1,1 +1,1 @@
-Enhanced script to launch wt.exe by win+enter on windows 11 x64 (for personal use)
+Enhanced script to launch cmd.exe by win+enter on windows 11 x64 (for personal use)
